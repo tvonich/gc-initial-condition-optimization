@@ -1,0 +1,13 @@
+graphcast/
+params/
+stats/
+data/
+jsons/
+a_logs/
+__pycache__/
+*.pyc
+*.npz
+*.nc
+*.zarr
+*.pkl
+.ipynb_checkpoints/
