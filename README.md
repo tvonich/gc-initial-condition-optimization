@@ -223,6 +223,34 @@ The optimization minimizes the forecast MSE with no explicit regularization on t
   ```
   This is not implemented by default because the research focus is on the theoretical lower bound of forecast error, not on physically constrained corrections. Add it in `jitted.py` if needed for your application.
 
+### Optimization Window Strategy
+
+**The problem with a single fixed window.** When optimizing over a long forecast (e.g., 10 days), the MSE loss is an unweighted sum across all lead times. Because forecast errors grow roughly exponentially with lead time, the loss is dominated by the last few time steps. The optimizer therefore focuses almost entirely on getting the end of the forecast right. But physically, the end of the forecast can only be correct if the early part of the trajectory is also correct — the phase-space region that leads to a good 10-day forecast is narrow, and the optimizer cannot find it if it is ignoring the early loss signal.
+
+**The expanding window method.** Rather than optimizing over the full window from the start, we grow the optimization target incrementally:
+
+1. Optimize over a short window (e.g., 1 day / 4 steps) until convergence.
+2. Extend the window by `r_step` steps (default: 10) and continue optimizing from the ICs found in step 1.
+3. Repeat until the target lead time is reached.
+
+Each short-window stage guides the ICs into the correct part of phase space for that lead time before the next stage asks them to satisfy a longer constraint. The ICs found at each stage become the warm start for the next, so optimization progress is cumulative rather than redundant.
+
+This is implemented in the `optimize` branch of `make_optimal_ic.py` via the `while pred_steps <= step_limit` loop, with `r_step` controlling the window increment. The default submit script uses `pred_steps=4` (1 day) and `step_limit=pred_steps`, so it runs a single window — to use the expanding method, set `step_limit` to your target lead time and `r_step` to the desired increment (e.g., `step_limit=40`, `r_step=10` for 10-day optimization in 4 stages):
+
+```python
+config = get_config(
+    init_date='2022-01-01T00:00:00',
+    run_type='optimize',
+    pred_steps=4,      # starting window
+    ...
+)
+# In make_optimal_ic.py, set:
+# r_step = 10
+# step_limit = 40    # expands: 4 → 14 → 24 → 34 → 40
+```
+
+**Alternatives.** Other approaches to the same problem include time-decaying loss weights (upweighting early lead times) or curriculum schedules that increase the window continuously rather than in steps. The expanding window method was developed for this pipeline because it is simple, requires no hyperparameter tuning of weight schedules, and naturally inherits the warm-start benefit of prior stages.
+
 ### Learning Rate
 
 The Adam optimizer LR is set automatically by `pred_steps` in `make_optimal_ic.py`:
