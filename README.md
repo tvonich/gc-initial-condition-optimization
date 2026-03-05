@@ -202,6 +202,14 @@ Set `DATA_PATH` in the submit script to the path of this file and `INIT_DATE` to
 | F32 | 7–11 day optimizations | `status64 = False` in `make_optimal_ic.py` |
 | F64 | >11 day optimizations (~80 GB VRAM) | `status64 = True` (default); `jax_enable_x64=True` |
 
+Two knobs control precision:
+
+1. **`status64` flag** (`make_optimal_ic.py`, near top of file) — controls whether the IC arrays and gradient computations use F32 or F64. Set `status64 = True` for F64, `False` for F32. This also toggles `jax.config.update("jax_enable_x64", status64)` on the next line.
+
+2. **`casting.Bfloat16Cast`** (`graphcast/casting.py`, called inside `jitted.py`) — controls the precision of the GraphCast forward pass itself. By default the model weights and activations are cast to BF16 before each forward pass, which saves memory and matches DeepMind's training setup. To disable BF16 casting and run the forward pass in full F32, set `enabled=False` in the `casting.Bfloat16Cast(predictor)` call inside `construct_wrapped_graphcast()` in `jitted.py`.
+
+For most use cases (≤11 day optimization windows), the default BF16 forward pass with F64 IC arrays (`status64 = True`) is the correct configuration and requires no changes.
+
 ### Noise and Perturbation Size
 
 The optimization minimizes the forecast MSE with no explicit regularization on the magnitude of IC perturbations. This means:
