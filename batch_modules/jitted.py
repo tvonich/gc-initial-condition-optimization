@@ -31,21 +31,6 @@ selected_times = config['selected_times']
 
 state={} #Needed for final functions on this page
 
-from collections.abc import Mapping
-
-def _to_mutable(tree):
-    if hasattr(hk.data_structures, "to_mutable_dict"):
-        return hk.data_structures.to_mutable_dict(tree)
-    return tree
-
-def _flatten_nested(d, prefix=()):
-    for k, v in d.items():
-        if isinstance(v, Mapping):
-            yield from _flatten_nested(v, prefix + (k,))
-        else:
-            key = "/".join(prefix + (k,))
-            yield key, np.asarray(v)
-
 def denormalize_64(dt, stats):
     """
     Denormalize an xarray.Dataset using provided statistics.
@@ -203,107 +188,6 @@ def update_params(opt_update, grads, opt_state, params):
     return new_params, new_opt_state
 
 
-@tws
-def mse_fn(
-    model_config,
-    task_config,
-    inputs,
-    targets,
-    forcings,
-    var_name: str = "geopotential",
-    level=500,
-    use_index: bool = False,
-    area_weighted: bool = True,
-):
-  """
-  Per-timestep MSE for a single variable/level, averaged over space (and batch if present).
-  RETURNS: jax.Array with shape (time,), NOT an xarray.DataArray (to stay JIT-safe).
-  Assumes dims like: (batch?, time, [level], lat, lon)
-  """
-  predictor = construct_wrapped_graphcast(model_config, task_config)
-  out = predictor(inputs, targets_template=targets, forcings=forcings)
-  preds = out[0] if isinstance(out, tuple) else out
-
-  if var_name not in preds or var_name not in targets:
-    raise ValueError(f"Variable '{var_name}' must exist in both predictions and targets.")
-
-  pred_var = preds[var_name]
-  targ_var = targets[var_name]
-
-  if "time" not in pred_var.dims:
-    raise ValueError(
-      f"Variable '{var_name}' does not have a 'time' dimension in predictions; "
-      "it looks static or not predicted. Choose a dynamic variable."
-    )
-
-  # Level selection if present
-  if "level" in pred_var.dims:
-    if use_index:
-      pred_sel = pred_var.isel(level=level)
-      targ_sel = targ_var.isel(level=level)
-    else:
-      pred_sel = pred_var.sel(level=level)
-      targ_sel = targ_var.sel(level=level)
-  else:
-    pred_sel = pred_var
-    targ_sel = targ_var
-
-  # Squared error (xarray) with dims e.g. (batch?, time, lat, lon)
-  se = (pred_sel - targ_sel) ** 2
-
-  # Expect spatial dims
-  if not all(d in se.dims for d in ("lat", "lon")):
-    raise ValueError("Expected 'lat' and 'lon' dims for spatial averaging.")
-
-  # Switch to pure JAX and operate by axis indices
-  dims = list(se.dims)
-  se_vals = xarray_jax.unwrap_data(se, require_jax=True)
-
-  # Reduce any non-spatial, non-time dims (e.g., batch)
-  keep = {"time", "lat", "lon"}
-  reduce_axes = [dims.index(d) for d in dims if d not in keep]
-  for ax in sorted(reduce_axes, reverse=True):
-    se_vals = jnp.nanmean(se_vals, axis=ax)
-    dims.pop(ax)
-
-  # Mean over longitude
-  lon_ax = dims.index("lon")
-  se_vals = jnp.nanmean(se_vals, axis=lon_ax)
-  dims.pop(lon_ax)
-
-  # Area weighting over lat (optional)
-  if area_weighted:
-      try:
-          lat_da = se["lat"]
-          lat_host = xarray_jax.unwrap_data(lat_da, require_jax=False)
-          lat_vals = jnp.asarray(lat_host, dtype=se_vals.dtype)
-
-          w_lat = jnp.cos(jnp.deg2rad(lat_vals))
-          lat_ax = dims.index("lat")
-
-          if lat_ax == 1:
-              w_b = w_lat[None, ...]
-          else:
-              w_b = w_lat
-
-          mask = jnp.isfinite(se_vals).astype(se_vals.dtype)
-          num = jnp.nansum(se_vals * w_b, axis=lat_ax)
-          den = jnp.nansum(w_b * mask, axis=lat_ax)
-          den = jnp.where(den == 0, 1.0, den)
-          mse_time = num / den
-
-      except Exception as e:
-          import logging
-          logger = logging.getLogger(__name__)
-          logger.error(f"[mse_fn] Area weighting failed: {type(e).__name__}: {e}")
-          raise RuntimeError("Area weighting computation failed.") from e
-
-  else:
-      lat_ax = dims.index("lat")
-      mse_time = jnp.nanmean(se_vals, axis=lat_ax)
-
-  return mse_time  # jax.Array (time,)
-
 def _grads_fn_bound(params, state, inputs, targets, forcings):
     return grads_fn(params, state, model_config, task_config, inputs, targets, forcings)
 
@@ -336,15 +220,6 @@ assert len(inspect.signature(_grads_fn_bound).parameters) == 5
 
 norm_grads32_fn_jitted = with_params(jax.jit(with_configs(norm_grads32_fn)))
 norm_grads64_fn_jitted = with_params(jax.jit(with_configs(norm_grads64_fn)))
-
-mse_fn_jitted = drop_state(
-    with_params(
-        jax.jit(
-            with_configs(mse_fn.apply),
-            static_argnames=("var_name", "level", "use_index", "area_weighted"),
-        )
-    )
-)
 
 run_forward_jitted = drop_state(with_params(jax.jit(with_configs(
     run_forward.apply))))

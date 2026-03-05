@@ -67,7 +67,9 @@ export GRAPHCAST_OUTPUT_PATH="${OUTPUT_PATH}"
 mkdir -p "${REPO_ROOT}/a_logs" "${REPO_ROOT}/jsons" "${OUTPUT_PATH}"
 
 # Activate conda environment.
-module load conda
+# On NCAR systems, 'module load conda' sets up the conda shell function.
+# On other systems, replace with: source ~/miniconda3/etc/profile.d/conda.sh
+module load conda 2>/dev/null || true
 conda activate "${CONDA_ENV}"
 
 # Write job config JSON.
