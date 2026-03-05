@@ -28,8 +28,8 @@ This is research code developed for NCAR HPC systems (Derecho / Casper), but it 
 
 | Item | Requirement |
 |------|-------------|
-| GPU | NVIDIA A100 recommended; 
-| RAM | System RAM pending dataset size |
+| GPU | NVIDIA A100 recommended; 40 GB for F32 (≤11 day), 80 GB for F64 (>11 day) |
+| RAM | ~50 GB (scales with dataset size) |
 | Python | 3.10 |
 | CUDA | 12.2 with cuDNN 8.9 |
 | Queue time | ~2 min walltime for a 1-day IC optimization |
@@ -79,7 +79,7 @@ conda env create -f environment.yml
 conda activate graphcast_ic
 ```
 
-This installs JAX 0.4.28 with CUDA 12.2 support, dm-haiku, optax, xarray, and all required dependencies. For exact version pinning (full reproducibility), see `envs/jax_cuda2_update.yaml`.
+This installs JAX 0.4.28 with CUDA 12.2 support, dm-haiku, optax, xarray, and all required dependencies.
 
 > **NCAR users:** The `jax_cuda2_derecho` environment on Derecho and `jax_cuda2_update` on Casper are equivalent pre-installed environments. Set `CONDA_ENV` in the submit script accordingly and skip `conda env create`.
 
