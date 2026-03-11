@@ -83,21 +83,34 @@ This installs JAX 0.4.28 with CUDA 12.2 support, dm-haiku, optax, xarray, and al
 
 > **NCAR users:** The `jax_cuda2_derecho` environment on Derecho and `jax_cuda2_update` on Casper are equivalent pre-installed environments. Set `CONDA_ENV` in the submit script accordingly and skip `conda env create`.
 
-### 4. Prepare your ERA5 dataset
+### 4. Download a test dataset
 
-See [ERA5 Data Format](#era5-data-format) below.
+DeepMind provides a small ERA5 sample (~293 MB, 12 time steps from 2022-01-01). No account required:
+
+```bash
+mkdir -p data
+wget -O data/era5_sample.nc \
+    https://storage.googleapis.com/dm_graphcast/dataset/source-era5_date-2022-01-01_res-1.0_levels-13_steps-12.nc
+```
+
+For your own data, see [ERA5 Data Format](#era5-data-format) below.
 
 ---
 
 ## Quick Start
 
+After completing setup steps 1–4:
+
 ```bash
-# 1. Edit the USER CONFIGURATION block in the submit script
-#    (4 variables: INIT_DATE, DATA_PATH, OUTPUT_PATH, CONDA_ENV)
+# 1. Edit the submit script:
+#    - Set your PBS project code (replace YOUR_PROJECT_CODE_HERE)
+#    - Set DATA_PATH to your ERA5 file (e.g., data/era5_sample.nc)
+#    - Set OUTPUT_PATH and CONDA_ENV for your system
+#    - If using the sample dataset, set INIT_DATE to 2022-01-01T00:00:00
 nano submit_jobs/run_ic_opt_1day.sh
 
 # 2. Submit from the repo root
-cd /path/to/graphcast_ic_opt
+mkdir -p a_logs
 qsub submit_jobs/run_ic_opt_1day.sh
 
 # 3. Monitor
@@ -105,7 +118,7 @@ qstat -u $USER
 tail -f a_logs/*.OU
 ```
 
-That is the complete workflow. The submit script handles JSON config creation, env var exports, and cleanup automatically.
+The submit script handles JSON config creation, env var exports, and cleanup automatically. A 1-day optimization takes ~5 minutes on an A100.
 
 ---
 
@@ -160,21 +173,7 @@ ckpt = np.load("path/to/{date}_{epoch}_{pred_steps}.npz")
 
 ## ERA5 Data Format
 
-### Test dataset
-
-DeepMind provides a small ERA5 sample file (~293 MB, 12 time steps, 2022-01-01) on their public GCS bucket. This is the easiest way to verify your setup:
-
-```bash
-# Option 1: wget (no GCS account required)
-wget -O data/era5_sample.nc \
-    https://storage.googleapis.com/dm_graphcast/dataset/source-era5_date-2022-01-01_res-1.0_levels-13_steps-12.nc
-
-# Option 2: gsutil
-gsutil cp gs://dm_graphcast/dataset/source-era5_date-2022-01-01_res-1.0_levels-13_steps-12.nc \
-    data/era5_sample.nc
-```
-
-Set `DATA_PATH` in the submit script to the path of this file and `INIT_DATE` to `2022-01-01T00:00:00`.
+A test dataset is included in [Setup step 4](#4-download-a-test-dataset) above. For your own data:
 
 ### Minimum requirements for this pipeline:
 

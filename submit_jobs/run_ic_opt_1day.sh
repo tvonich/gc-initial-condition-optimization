@@ -12,6 +12,7 @@
 #
 # PBS logs are written to a_logs/ relative to the submission directory.
 # You MUST qsub from the repo root for this path to resolve correctly.
+# Create a_logs/ before submitting:  mkdir -p a_logs
 #
 # NCAR QUEUE NOTES:
 #   develop — short runs (<30 min), fast start, max 2 jobs at once
@@ -38,19 +39,21 @@ DATA_PATH="/path/to/your/era5_dataset.nc"      # ERA5 NetCDF file in GraphCast f
                                                # 1-degree resolution, 13 pressure levels.
                                                # See README for required variable list.
 
-OUTPUT_PATH="/glade/derecho/scratch/${USER}/graphcast_ic_outputs"
-                                               # Where optimized ICs and loss logs are saved.
+OUTPUT_PATH="/path/to/your/output_directory"   # Where optimized ICs and loss logs are saved.
                                                # Subdirectories created automatically:
                                                #   perfect_model_params/{date}/
                                                #   perfect_model_losses/{date}/
+                                               # NCAR example: /glade/derecho/scratch/${USER}/graphcast_ic_outputs
 
 CONDA_ENV="graphcast_ic"                       # Conda environment name.
                                                # Default: graphcast_ic (from environment.yml)
                                                # Casper alternative: jax_cuda2_update
 # =============================================================================
 
-# Derive repo root from script location — works after any git clone.
-REPO_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+# Repo root = the directory from which you ran qsub (must be the repo root).
+# PBS_O_WORKDIR is set by PBS to the submission directory. BASH_SOURCE does not
+# work because PBS copies the script to a spool directory before execution.
+REPO_ROOT="${PBS_O_WORKDIR}"
 
 # Unique job number from PBS — avoids race condition when jobs start simultaneously.
 number=${PBS_JOBID%%.*}
