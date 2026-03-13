@@ -234,7 +234,7 @@ The optimization minimizes the forecast MSE with no explicit regularization on t
 
 Each short-window stage guides the ICs into the correct part of phase space for that lead time before the next stage asks them to satisfy a longer constraint. The ICs found at each stage become the warm start for the next, so optimization progress is cumulative rather than redundant.
 
-This is implemented in the `optimize` branch of `make_optimal_ic.py` via the `while pred_steps <= step_limit` loop, with `r_step` controlling the window increment. The default submit script uses `pred_steps=4` (1 day) and `step_limit=pred_steps`, so it runs a single window — to use the expanding method, set `step_limit` to your target lead time and `r_step` to the desired increment (e.g., `step_limit=40`, `r_step=10` for 10-day optimization in 4 stages):
+This is implemented in the `optimize` branch of `make_optimal_ic.py` via the `while pred_steps <= step_limit` loop, with `r_step` controlling the window increment. The default submit script uses `pred_steps=4` (1 day) and `step_limit=pred_steps`, so it runs a single window — to use the expanding method, set `step_limit` to your target lead time and `r_step` to the desired increment (e.g., `step_limit=40`, `r_step=10` for 10-step (2.5-day) optimization in 4 stages):
 
 ```python
 config = get_config(
