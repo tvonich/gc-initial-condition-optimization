@@ -47,11 +47,16 @@ This code requires the DeepMind GraphCast library (the `graphcast/` directory). 
 git clone https://github.com/tvonich/gc-initial-condition-optimization
 cd gc-initial-condition-optimization
 
-# Clone the DeepMind GraphCast source into the graphcast/ directory
+# Clone the DeepMind GraphCast source into the graphcast/ directory,
+# pinned to a commit compatible with the JAX 0.4.28 pin in environment.yml.
+# (Newer commits on main use jax.pmap APIs that require a newer JAX.)
 git clone https://github.com/google-deepmind/graphcast.git graphcast
+cd graphcast && git checkout 97b9223a641fd9ade6fbeb71755f1e0e50dad4cc && cd ..
 ```
 
 The `graphcast/` directory contains the model source (GNN architecture, checkpoint loading, data utilities), cloned from the [official DeepMind GraphCast repository](https://github.com/google-deepmind/graphcast). It is not bundled in this repo — clone it separately as shown above. Cite the DeepMind GraphCast paper if you use it.
+
+> **Why the pinned commit?** DeepMind's `main` branch has since moved to newer `jax.pmap` APIs that require a newer JAX than the `0.4.28` pin in `environment.yml`. The pinned commit (`97b9223a`, Jul 2025) is a known-compatible version. If you want to use a newer GraphCast, you will also need to upgrade JAX/jaxlib in `environment.yml` and may need to adjust the import surface in `batch_modules/`.
 
 > **Important:** Do not use the model loading or inference scripts from the DeepMind GraphCast repo directly. This repo provides its own `batch_modules/load_model.py` and `batch_modules/jitted.py`, which wrap the GraphCast model with the custom normalization, BFloat16 casting, and JIT-compiled gradient functions needed for IC optimization. The DeepMind repo's demo notebooks and `run_graphcast.py` are not compatible with this pipeline.
 
@@ -370,3 +375,4 @@ A successful run produces:
 | `KeyError: init_date not found in dataset` | `INIT_DATE` not present in ERA5 file |
 | `OOM / CUDA out of memory` | Dataset too large or wrong GPU type; requires A100 80GB for F64 |
 | `Multiple values for argument` | Calling JIT-wrapped functions with positional args — use keyword args |
+| `AttributeError` or `TypeError` inside `graphcast/rollout.py` or `xarray_jax.py` | GraphCast clone is newer than the pinned commit and incompatible with `jax==0.4.28` — check out `97b9223a` in the `graphcast/` dir |
