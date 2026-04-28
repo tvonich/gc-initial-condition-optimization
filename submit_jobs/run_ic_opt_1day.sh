@@ -87,6 +87,14 @@ config = get_config(
     run_type='optimize',
     pred_steps=4,
     justify='left',
+    # Selectors restrict which part of the forecast contributes to the loss
+    # (and therefore which gradient signal drives IC optimization).
+    # Default 'all' = global, all variables, full lead-time window.
+    # See README \"Configuration Reference\" for full semantics. Examples:
+    #   selected_region=[40.0, 55.0, 230.0, 250.0]   # PNW box; lon in [0,359], lon_max>=lon_min
+    #   selected_vars=['2m_temperature', 'geopotential']
+    #   selected_lvls=[500, 850]                     # subset of pressure levels
+    #   selected_times=[2, 2]                        # [start_idx, size]; pos 2-3 = 18 & 24 hr
     selected_region='all',
     selected_vars='all',
     selected_lvls='all',

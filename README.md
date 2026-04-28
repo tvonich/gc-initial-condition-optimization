@@ -137,10 +137,10 @@ The submit script creates a JSON config file at runtime. To modify parameters be
 | `run_type` | string | `"optimize"` | `optimize`: IC optimization loop. `pred`: forward rollout only. `loss`: compute loss only. `grad`: compute gradients only. |
 | `pred_steps` | int | `4` | Number of 6-hour steps in the optimization window. 4 = 1 day, 8 = 2 days, 20 = 5 days. |
 | `justify` | string | `"left"` | Time alignment for input/target extraction. Use `"left"` (default). |
-| `selected_vars` | string or list | `"all"` | Variables to include in loss. `"all"` or e.g. `["2m_temperature", "geopotential"]`. |
-| `selected_lvls` | string or list | `"all"` | Pressure levels for loss. `"all"` or e.g. `[500, 850, 1000]`. |
-| `selected_region` | string or list | `"all"` | Spatial extent. `"all"` or `[lat_min, lat_max, lon_min, lon_max]`. |
-| `selected_times` | string or list | `"all"` | Time steps to include in loss. `"all"` or `[start_idx, size]`. |
+| `selected_vars` | string or list | `"all"` | Variables to include in loss. `"all"` or e.g. `["2m_temperature", "geopotential"]`. Per-variable loss weights (defined in `batch_modules/jitted.py:_PER_VARIABLE_WEIGHTS`) match DeepMind's defaults: `2m_temperature`=1.0, surface winds / MSLP / precip=0.1, all others=1.0. |
+| `selected_lvls` | string or list | `"all"` | Pressure levels for loss. `"all"` or e.g. `[500, 850, 1000]`. Values must be a subset of the 13 levels listed below. Surface variables are unaffected. |
+| `selected_region` | string or list | `"all"` | Spatial extent for loss. `"all"` or `[lat_min, lat_max, lon_min, lon_max]`. Longitude is **0 to 359** (not −180 to 180); both lat and lon must be ascending in the dataset. `lon_max ≥ lon_min` required — regions wrapping the 0/360 meridian are not supported (split into two runs or rotate). Example: `[40.0, 55.0, 230.0, 250.0]` targets the Pacific Northwest. |
+| `selected_times` | string or list | `"all"` | Forecast time steps to include in loss. `"all"` or `[start_idx, size]`, **0-indexed positional** — `start_idx` is the first prediction time index (position 0 = lead time 6 hr, position 1 = 12 hr, …) and `size` is how many consecutive steps to include. For a 1-day (4-step) run: `[0, 4]` = all 4 steps; `[2, 2]` = last two steps (18 hr & 24 hr); `[0, 2]` = first two steps (6 hr & 12 hr). |
 
 **Variable names (GraphCast 1.0-degree, 13-level):**
 ```
