@@ -50,6 +50,7 @@ from load_model import model_config, task_config, params, fp
 from prep_prediction import init_date, run_type, pred_steps, selected_vars, selected_lvls, selected_times, selected_region, just
 from prep_prediction import zero_grads, normalize_32, normalize_64, make_grads
 from graphcast import rollout, data_utils, checkpoint, graphcast
+import _data_utils_patch  # restores justify='left'/'right' on data_utils
 import jitted
 
 #LOAD TARGET

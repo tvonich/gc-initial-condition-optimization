@@ -60,6 +60,8 @@ The `graphcast/` directory contains the model source (GNN architecture, checkpoi
 
 > **Important:** Do not use the model loading or inference scripts from the DeepMind GraphCast repo directly. This repo provides its own `batch_modules/load_model.py` and `batch_modules/jitted.py`, which wrap the GraphCast model with the custom normalization, BFloat16 casting, and JIT-compiled gradient functions needed for IC optimization. The DeepMind repo's demo notebooks and `run_graphcast.py` are not compatible with this pipeline.
 
+> **Patch applied at runtime:** `batch_modules/_data_utils_patch.py` monkey-patches `graphcast.data_utils.extract_inputs_targets_forcings` (and `extract_input_target_times`) to add a `justify` keyword (`'left'` default, `'right'` supported). Upstream's behavior is right-justified only; this pipeline anchors `init_date` at the first input timestep. The patch overrides only those two functions — all other graphcast helpers resolve to upstream. It is imported automatically near the top of `make_optimal_ic.py`; no action required.
+
 ### 2. Download model weights and normalization statistics
 
 Model weights and normalization statistics are distributed separately by DeepMind via Google Cloud Storage. Download them into the expected directories:
